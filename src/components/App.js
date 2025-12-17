@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
@@ -8,41 +7,30 @@ import "react-popup/style.css";
 
 const localizer = momentLocalizer(moment);
 
-function App() {
+const App = () => {
   const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-
   const [filter, setFilter] = useState("all");
 
+  // Add Event
   const handleSelectSlot = ({ start }) => {
     Popup.create({
       title: "Create Event",
-      content: (
-        <div>
-          <input placeholder="Event Title" id="title" />
-          <input placeholder="Event Location" id="location" />
-        </div>
-      ),
+      content: `
+        <input placeholder="Event Title" id="event-title" />
+        <input placeholder="Event Location" id="event-location" />
+      `,
       buttons: {
         right: [
           {
             text: "Save",
             className: "mm-popup__btn",
             action: () => {
-              const title = document.getElementById("title").value;
-              const location = document.getElementById("location").value;
+              const title = document.getElementById("event-title").value;
+              const location = document.getElementById("event-location").value;
               if (title) {
-                setEvents([
-                  ...events,
-                  {
-                    start,
-                    end: start,
-                    title,
-                    location,
-                  },
-                ]);
-                Popup.close();
+                setEvents([...events, { start, title, location }]);
               }
+              Popup.close();
             },
           },
         ],
@@ -50,30 +38,43 @@ function App() {
     });
   };
 
+  // Filter events
+  const filteredEvents = events.filter((event) => {
+    const now = new Date();
+    if (filter === "past") return new Date(event.start) < now;
+    if (filter === "upcoming") return new Date(event.start) >= now;
+    return true;
+  });
+
+  // Event styling
+  const eventStyleGetter = (event) => {
+    const now = new Date();
+    const style = {
+      backgroundColor:
+        new Date(event.start) < now
+          ? "rgb(222, 105, 135)" // past
+          : "rgb(140, 189, 76)", // upcoming
+      color: "white",
+    };
+    return { style };
+  };
+
+  // Edit/Delete Event
   const handleSelectEvent = (event) => {
-    setSelectedEvent(event);
     Popup.create({
       title: "Edit/Delete Event",
-      content: (
-        <div>
-          <input
-            defaultValue={event.title}
-            id="editTitle"
-            placeholder="Event Title"
-          />
-        </div>
-      ),
+      content: `
+        <input placeholder="Event Title" id="edit-title" value="${event.title}" />
+      `,
       buttons: {
         right: [
           {
             text: "Save",
             className: "mm-popup__btn--info",
             action: () => {
-              const updatedTitle = document.getElementById("editTitle").value;
+              const newTitle = document.getElementById("edit-title").value;
               setEvents(
-                events.map((e) =>
-                  e === event ? { ...e, title: updatedTitle } : e
-                )
+                events.map((e) => (e === event ? { ...e, title: newTitle } : e))
               );
               Popup.close();
             },
@@ -91,22 +92,9 @@ function App() {
     });
   };
 
-  const filteredEvents = events.filter((e) => {
-    if (filter === "past") return moment(e.start).isBefore(moment(), "day");
-    if (filter === "upcoming") return moment(e.start).isAfter(moment(), "day");
-    return true;
-  });
-
-  const eventStyleGetter = (event) => {
-    const bgColor = moment(event.start).isBefore(moment(), "day")
-      ? "rgb(222, 105, 135)" // Past
-      : "rgb(140, 189, 76)"; // Upcoming
-    return { style: { backgroundColor: bgColor, color: "white" } };
-  };
-
   return (
-    <div className="App" style={{ margin: "20px" }}>
-      <div style={{ marginBottom: "10px" }}>
+    <div>
+      <div className="filters">
         <button className="btn" onClick={() => setFilter("all")}>
           All
         </button>
@@ -117,22 +105,20 @@ function App() {
           Upcoming
         </button>
       </div>
-
       <Calendar
         localizer={localizer}
         events={filteredEvents}
         startAccessor="start"
-        endAccessor="end"
-        style={{ height: 500 }}
+        endAccessor="start"
         selectable
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
         eventPropGetter={eventStyleGetter}
       />
-      <Popup />
     </div>
   );
-}
+};
 
 export default App;
+
 
